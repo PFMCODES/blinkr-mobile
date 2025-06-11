@@ -1,5 +1,5 @@
 {
-  "extends": "/node_modules/expo/tsconfig.base.json",
+  "extends": "./node_modules/expo/tsconfig.base",
   "compilerOptions": {
     "jsx": "react",
     "strict": true,
@@ -15,5 +15,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "app/index.tsx"  ]
+, "app/App.tsx"  ]
 }

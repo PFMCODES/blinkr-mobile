@@ -1,13 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
 import type { JSX } from "react";
 import * as React from "react";
 import { useRef, useState } from "react";
-import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Dimensions,
+  Easing,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -29,7 +32,7 @@ interface MenuOption {
   action: () => void;
 }
 
-export default function Index(): JSX.Element {
+export default function App(): JSX.Element {
   const [url, setUrl] = useState<string>("https://google.com");
   const [currentUrl, setCurrentUrl] = useState<string>("https://google.com");
   const [canGoBack, setCanGoBack] = useState<boolean>(false);
@@ -38,10 +41,20 @@ export default function Index(): JSX.Element {
   const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
   const webViewRef = useRef<WebView>(null);
   const router = useRouter();
+  const [reloadAnim] = useState(new Animated.Value(0));
   const inputRef = useRef<TextInput>(null);
   const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
 
   // Function to validate and format URL
+  const animateReload = () => {
+    reloadAnim.setValue(0);
+    Animated.timing(reloadAnim, {
+      toValue: 1,
+      duration: 600,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start();
+  };
   const formatUrl = (inputUrl: string): string => {
     let formattedUrl = inputUrl.trim();
     
@@ -84,9 +97,9 @@ export default function Index(): JSX.Element {
   const refresh = (): void => {
     if (webViewRef.current) {
       webViewRef.current.reload();
+      animateReload();
     }
   };
-
   const handleMorePress = (): void => {
     setShowMoreMenu(true);
   };
@@ -179,7 +192,7 @@ export default function Index(): JSX.Element {
       title: 'Settings',
       icon: <Ionicons name="settings-outline" size={22} color="#fff" />,
       action: () => {
-        Alert.alert('Settings', 'Settings feature coming soon!');
+        router.push("/setting")
         setShowMoreMenu(false);
       },
     },
@@ -233,9 +246,21 @@ export default function Index(): JSX.Element {
       >
         {/* Address Bar with Reload and More buttons */}
         <View style={styles.addressBar}>
-          <TouchableOpacity style={[styles.sideButton, { left: 4 }]} onPress={refresh}>
-            <Ionicons name="reload" size={16} color='#fff'/>
-          </TouchableOpacity>
+          <TouchableOpacity onPress={refresh}>
+            <Animated.View style={{
+              transform: [{
+                rotate: reloadAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg']
+                })
+              }]
+            }}>
+              <Ionicons style={{
+                marginLeft: 15,
+                marginRight: 0,
+  }} name="reload" size={16} color="#fff" />
+          </Animated.View>
+        </TouchableOpacity>
           
           <TextInput
             ref={inputRef}
@@ -253,7 +278,7 @@ export default function Index(): JSX.Element {
           />
           
           <TouchableOpacity style={[styles.sideButton, { right: 4 }]} onPress={handleMorePress}>
-            <Text style={styles.sideButtonText}>⋯</Text>
+            <Ionicons name="ellipsis-vertical" size={18} color="#fff" />
           </TouchableOpacity>
           
           {loading && (
@@ -370,17 +395,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
     position: "relative",
+    backgroundColor: "#444",
+    borderColor: "#666",
+    borderRadius: 8,
+    borderWidth: 1,
   },
   input: {
     flex: 1,
     padding: 12,
-    paddingLeft: 50, // Space for reload button
-    paddingRight: 50, // Space for more button
-    borderWidth: 1,
-    borderColor: "#666",
-    borderRadius: 8,
+    paddingLeft: 40, // Space for reload button
+    paddingRight: 40, // Space for more button
     color: "#fff",
-    backgroundColor: "#444",
     fontSize: 16,
   },
   sideButton: {

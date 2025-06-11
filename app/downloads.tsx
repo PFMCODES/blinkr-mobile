@@ -1,13 +1,13 @@
 import * as React from "react";
-import { Button, StyleSheet, Text, View } from "react-native";
-import Index from ".";
-import Settings from "./setting";
+import { View, Button, Text, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 
-export default function Downloads() {
+export default function Settings() {
+    const router = useRouter()
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Downloads Page</Text>
-            <Button onPress={Settings} title="click me"/>
+      <Text style={styles.text}>Settings Page</Text>
+      <Button title="click me" onPress={() => router.push("/")}/>
     </View>
   );
 }
