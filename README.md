@@ -1,50 +1,57 @@
-# Welcome to your Expo app 👋
+# **Blinkr Mobile Browser**
+[![runs with Expo Go](https://img.shields.io/badge/Runs%20with%20Expo%20Go-4630EB.svg?style=flat-square&logo=EXPO&labelColor=f3f3f3&logoColor=000)](https://expo.dev/client)
+[![GitHub](https://img.shields.io/badge/PFM37-Blinker--Mobile-8208FB?logo=github&logoColor=fff)](https://github.com/PFM37/blinkr-mobile)
+[![Pre-Release 1.0.0](https://img.shields.io/badge/Pre--Release-v1.0.0-8208FB?logo=github&logoColor=fff)](https://github.com/PFM37/blinkr-mobile/releases/tag/pre-release-1.0.0)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+[![Pre-Release 1.0.0](https://img.shields.io/badge/Download_latest_version-8208FB)](https://github.com/PFM37/blinkr-mobile/releases/download/pre-release-1.0.0/pre-release-1.0.0.apk)
 
-## Get started
+Blinkr is a modern, minimal mobile web browser built with React Native and Expo. It features a fast webview, smart address bar, and a beautiful, dark-themed UI.
 
-1. Install dependencies
+## ✨ Features
 
-   ```bash
-   npm install
-   ```
+- Fast web browsing with WebView
+- Smart address/search bar
+- Reload, back, and forward navigation
+- Share current page
+- Bookmarks, history, and downloads (coming soon)
+- Modern dark UI
+- File downloads to app storage
+- More menu for extra actions
+<br><br>
 
-2. Start the app
+# **For Devs:**
+## **⚠️ Proceed if you know what are you doing ⚠️**
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### 1. **Clone the repo**
 ```bash
-npm run reset-project
+git clone https://github.com/PFM37/blinkr-mobile.git
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 2. **cd into repo**
+```
+cd blinkr-mobile
+```
 
-## Learn more
+### 3. **Install dependencies**
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npm install
+```
+### 3. **Connect to a emulator or a Mobile device**
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### android
 
-## Join the community
+[Connect Your Android ](https://developer.android.com/tools/adb)
 
-Join our community of developers creating universal apps.
+### ios
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+[Connect Your IOS](https://support.apple.com/en-in/guide/mac-help/mchlada1d602/mac)
+
+### emulator
+expo automatically starts the emulator for you just skip to the next step
+
+### 5. **Start the app**
+
+```bash
+npm run <android/ios/web>
+```
