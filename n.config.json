@@ -1,0 +1,9 @@
+{
+    "build": "npm start",
+    "commit": ".",
+    "custom": {
+        "android": "expo start --android",
+        "ios": "expo start --ios",
+        "web": "expo start --web"
+    }
+}
