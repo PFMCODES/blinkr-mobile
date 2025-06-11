@@ -1,0 +1,19 @@
+{
+  "extends": "/node_modules/expo/tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react",
+    "strict": true,
+    "lib": ["es2015", "dom"],
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+, "app/index.tsx"  ]
+}
