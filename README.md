@@ -1,7 +1,7 @@
 # **Blinkr Mobile Browser**
 [![runs with Expo Go](https://img.shields.io/badge/Runs%20with%20Expo%20Go-4630EB.svg?style=flat-square&logo=EXPO&labelColor=f3f3f3&logoColor=000)](https://expo.dev/client)
 [![GitHub](https://img.shields.io/badge/PFM37-Blinker--Mobile-8208FB?logo=github&logoColor=fff)](https://github.com/PFM37/blinkr-mobile)
-[![Release 1.0.0](https://img.shields.io/badge/Release-v1.0.0-8208FB?logo=github&logoColor=fff)](https://github.com/PFM37/blinkr-mobile/releases/tag/pre-release-1.0.0)
+[![Release 1.0.0](https://img.shields.io/badge/Release-v1.0.0-8208FB?logo=github&logoColor=fff)](https://github.com/PFMCODES/blinkr-mobile/releases/tag/Blinkr-1.0.0)
 
 [![Pre-Release 1.0.0](https://img.shields.io/badge/Download_latest_version-8208FB)](https://github.com/PFMCODES/blinkr-mobile/releases/download/Blinkr-1.0.0/Blinkr-1.0.0.apk)
 
