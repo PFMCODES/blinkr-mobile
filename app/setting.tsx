@@ -121,7 +121,6 @@ export default function Settings() {
             borderTopRightRadius: 16,
             paddingBottom: 24,
             paddingTop: 8,
-            alignItems: "center"
           }}>
             {menuOptions.map(option => (
               <TouchableOpacity
