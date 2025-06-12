@@ -2,11 +2,11 @@ import * as React from "react";
 import { View, Button, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 
-export default function Settings() {
+export default function Bookmarks() {
     const router = useRouter()
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Settings Page</Text>
+      <Text style={styles.text}>BooksMark Page</Text>
       <Button title="click me" onPress={() => router.push("/")}/>
     </View>
   );

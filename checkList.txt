@@ -1,0 +1,11 @@
+Basic Browsing ✔
+desktop mode ✔
+forward button ✔
+backward button ✔
+refresh button ✔
+share button ✔
+bookmarks ✔
+history - finish first
+downloads - working on it
+setting - working on it
+find in page ✔

@@ -1,16 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Appearance } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from "expo-file-system";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import type { JSX } from "react";
 import * as React from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
   Easing,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -33,6 +34,15 @@ interface MenuOption {
 }
 
 export default function App(): JSX.Element {
+  const params = useLocalSearchParams();
+  const justSetFromParams = useRef(false);
+  const [showFindBar, setShowFindBar] = useState(false);
+  const [findText, setFindText] = useState('');
+  const [findIndex, setFindIndex] = useState(0);
+  const [findCount, setFindCount] = useState(0);
+  const [desktopMode, setDesktopMode] = useState(false);
+  const desktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  const mobileUserAgent = undefined; // Use default mobile UA
   const [url, setUrl] = useState<string>("https://google.com");
   const [currentUrl, setCurrentUrl] = useState<string>("https://google.com");
   const [canGoBack, setCanGoBack] = useState<boolean>(false);
@@ -41,10 +51,171 @@ export default function App(): JSX.Element {
   const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
   const webViewRef = useRef<WebView>(null);
   const router = useRouter();
+  const [bookmarkIcon, setBookmarkIcon] = useState<'bookmark-outline' | 'bookmark'>('bookmark-outline');
   const [reloadAnim] = useState(new Animated.Value(0));
   const inputRef = useRef<TextInput>(null);
-  const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
+  const [findBarAnim] = useState(new Animated.Value(0));
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const darkStyles = StyleSheet.create({
+  container: { backgroundColor: "#333"},
+  text: { color: "#fff" },
+  // ...add/replace other style keys as needed...
+});
 
+const lightStyles = StyleSheet.create({
+  container: { backgroundColor: "#f5f5f5"},
+  text: { color: "#222" },
+  // ...add/replace other style keys as needed...
+});
+  const themed = theme === "dark" ? darkStyles : lightStyles;
+
+  useEffect(() => {
+    AsyncStorage.getItem("theme").then(val => {
+      if (val === "light" || val === "dark") setTheme(val);
+      else setTheme("light");
+    });
+  }, []);
+      useEffect(() => {
+        if (params.url && typeof params.url === "string") {
+          setUrl(params.url);
+          setCurrentUrl(params.url);
+          justSetFromParams.current = true;
+        }
+        // eslint-disable-next-line
+      }, []);
+      useEffect(() => {
+        Animated.timing(findBarAnim, {
+          toValue: showFindBar ? 1 : 0,
+          duration: 300,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }).start();
+      }, [showFindBar]);
+  const runFindInPage = (text: string, index: number = 0) => {
+  if (!text) {
+    webViewRef.current?.injectJavaScript(`
+      if(window.__clearFindHighlights){window.__clearFindHighlights();}
+      true;
+    `);
+    setFindCount(0);
+    return;
+  }
+  webViewRef.current?.injectJavaScript(`
+      (function(){
+        if(!window.__findInPage){
+          window.__findInPage = function(text, idx){
+            if(window.__clearFindHighlights){window.__clearFindHighlights();}
+            var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+            var matches = [];
+            var nodes = [];
+            var node;
+            while(node = walker.nextNode()){
+              var i = node.nodeValue.toLowerCase().indexOf(text.toLowerCase());
+              while(i !== -1){
+                matches.push({node: node, index: i});
+                i = node.nodeValue.toLowerCase().indexOf(text.toLowerCase(), i + text.length);
+              }
+            }
+            window.__findMatches = matches;
+            window.__findText = text;
+            window.__findIdx = idx;
+            if(matches.length){
+              var match = matches[idx % matches.length];
+              var n = match.node;
+              var i = match.index;
+              var span = document.createElement('span');
+              span.style.background = 'yellow';
+              span.style.color = 'black';
+              span.textContent = n.nodeValue.substr(i, text.length);
+              var after = n.splitText(i);
+              after.nodeValue = after.nodeValue.substr(text.length);
+              n.parentNode.insertBefore(span, after);
+              span.scrollIntoView({behavior:'smooth', block:'center'});
+            }
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'findCount', count:matches.length}));
+          }
+          window.__clearFindHighlights = function(){
+            var spans = document.querySelectorAll('span[style*=\"background: yellow\"]');
+            spans.forEach(function(span){
+              var text = document.createTextNode(span.textContent);
+              span.parentNode.replaceChild(text, span);
+            });
+          }
+        }
+        window.__findInPage(${JSON.stringify(text)}, ${index});
+        true;
+      })();
+    `);
+  };
+  const isBookmarked = async (currentUrl: string): Promise<boolean> => {
+    try {
+      const stored = await AsyncStorage.getItem("bookmarks");
+      if (!stored) return false;
+
+      const bookmarks = JSON.parse(stored);
+      return bookmarks.some((bookmark: any) => bookmark.url === currentUrl);
+    } catch (err) {
+      console.error("Error checking bookmark:", err);
+      return false;
+    }
+  };
+  let updateBookmarkIcon;
+  useEffect(() => {
+  updateBookmarkIcon = async () => {
+    const bookmarked = await isBookmarked(currentUrl);
+    setBookmarkIcon(bookmarked ? 'bookmark' : 'bookmark-outline');
+  };
+
+  updateBookmarkIcon();
+}, [currentUrl]);
+
+  const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
+  const saveBookmark = async () => {
+      try {
+        const newBookmark = {
+          url: currentUrl,
+          title: currentUrl, // or extract title using injected JS if needed
+          timestamp: Date.now(),
+        };
+
+        const stored = await AsyncStorage.getItem("bookmarks");
+        const bookmarks = stored ? JSON.parse(stored) : [];
+
+        // Avoid duplicate
+        const isDuplicate = bookmarks.some((b: any) => b.url === newBookmark.url);
+        if (isDuplicate) {
+          Alert.alert(
+            "Already Bookmarked",
+            "Remove this page from bookmarks?",
+            [
+              {
+                text: "Cancel",
+                style: "cancel"
+              },
+              {
+                text: "OK",
+                onPress: async () => {
+                  // Remove the bookmark
+                  const updated = bookmarks.filter((b: any) => b.url !== newBookmark.url);
+                  await AsyncStorage.setItem("bookmarks", JSON.stringify(updated));
+                  setBookmarkIcon('bookmark-outline');
+                }
+              }
+            ]
+          );
+          return;
+        }
+
+        bookmarks.push(newBookmark);
+        await AsyncStorage.setItem("bookmarks", JSON.stringify(bookmarks));
+        setBookmarkIcon('bookmark'); // update icon
+      } catch (err) {
+        console.error("Failed to save bookmark:", err);
+        Alert.alert("Error", "Failed to save the bookmark.");
+      }
+
+      setShowMoreMenu(false);
+    };
   // Function to validate and format URL
   const animateReload = () => {
     reloadAnim.setValue(0);
@@ -108,6 +279,15 @@ export default function App(): JSX.Element {
     setShowMoreMenu(false);
   };
 
+  const onWebViewMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'findCount') {
+        setFindCount(data.count);
+      }
+    } catch {}
+  };
+
   // Share/Copy functionality
   const handleShare = async (): Promise<void> => {
     try {
@@ -136,19 +316,19 @@ export default function App(): JSX.Element {
     {
       id: 'back',
       title: 'Back',
-      icon: <Ionicons name="arrow-back" size={22} color="#fff" />,
+      icon: <Ionicons name="arrow-back" size={22} color={theme === "dark" ? "#fff" : "#222"} />,
       action: goBack,
     },
     {
       id: 'forward',
       title: 'Forward',
-      icon: <Ionicons name="arrow-forward" size={22} color="#fff" />,
+      icon: <Ionicons name="arrow-forward" size={22} color={theme === "dark" ? "#fff" : "#222"} />,
       action: goForward,
     },
     {
       id: 'refresh',
       title: 'Refresh',
-      icon: <Ionicons name="reload" size={18} color='#fff'/>,
+      icon: <Ionicons name="reload" size={18} color={theme === "dark" ? "#fff" : "#222"}/>,
       action: () => {
         refresh();
         setShowMoreMenu(false);
@@ -157,40 +337,37 @@ export default function App(): JSX.Element {
     {
       id: 'share',
       title: 'Share',
-      icon: <Ionicons name="share-outline"  size={24} color="#fff"/>,
+      icon: <Ionicons name="share-outline"  size={24} color={theme === "dark" ? "#fff" : "#222"}/>,
       action: handleShare,
     },
     {
       id: 'bookmarks',
       title: 'Bookmarks',
-      icon: <Ionicons name="bookmark-outline" size={22} color="#fff" />,
-      action: () => {
-        Alert.alert('Bookmarks', 'Bookmarks feature coming soon!');
-        setShowMoreMenu(false);
-      },
+      icon: <Ionicons name={bookmarkIcon} size={22} color={theme === "dark" ? "#fff" : "#222"} />,
+      action: saveBookmark,
     },
     {
       id: 'history',
       title: 'History',
-      icon: <Ionicons name="time-outline" size={22} color="#fff" />,
+      icon: <Ionicons name="time-outline" size={22} color={theme === "dark" ? "#fff" : "#222"} />,
       action: () => {
-        Alert.alert('History', 'History feature coming soon!');
+        router.push("/history")
         setShowMoreMenu(false);
       },
     },
     {
-      id: 'downloads',
-      title: 'Downloads',
-      icon: <Ionicons name="download-outline" size={22} color="#fff" />,
-      action: () => {
-        router.push("/downloads");
-        setShowMoreMenu(false);
+        id: 'bookmarks-2',
+        title: 'See Bookmarks',
+        icon: <Ionicons name="bookmarks-sharp" size={22} color={theme === "dark" ? "#fff" : "#222"} />,
+        action: () => {
+          router.push("/bookmarks");
+          setShowMoreMenu(false);
+        },
       },
-    },
     {
       id: 'settings',
       title: 'Settings',
-      icon: <Ionicons name="settings-outline" size={22} color="#fff" />,
+      icon: <Ionicons name="settings-outline" size={22} color={theme === "dark" ? "#fff" : "#222"} />,
       action: () => {
         router.push("/setting")
         setShowMoreMenu(false);
@@ -198,20 +375,24 @@ export default function App(): JSX.Element {
     },
     {
       id: 'desktop',
-      title: 'Desktop site',
-      icon: <Ionicons name="desktop-outline" size={22} color="#fff" />,
+      title: desktopMode ? 'Mobile site mode' : 'Desktop site mode',
+      icon:  desktopMode ? <Ionicons name="phone-portrait-outline" size={22} color={theme === "dark" ? "#fff" : "#222"} /> : <Ionicons name="desktop-outline" size={22} color={theme === "dark" ? "#fff" : "#222"} />,
       action: () => {
-        Alert.alert('Desktop Site', 'Desktop site feature coming soon!');
+        setDesktopMode(!desktopMode);
         setShowMoreMenu(false);
+        // Optionally reload the page to apply the new user agent
+        setTimeout(() => {
+          if (webViewRef.current) webViewRef.current.reload();
+        }, 100);
       },
     },
     {
       id: 'find',
       title: 'Find in page',
-      icon: <Ionicons name="search-outline" size={22} color="#fff" />,
+      icon: <Ionicons name="search-outline" size={22} color={theme === "dark" ? "#fff" : "#222"} />,
       action: () => {
-        Alert.alert('Find', 'Find in page feature coming soon!');
         setShowMoreMenu(false);
+        setShowFindBar(true);
       },
     },
   ];
@@ -220,8 +401,29 @@ export default function App(): JSX.Element {
   const onNavigationStateChange = (navState: WebViewNavigation): void => {
     setCanGoBack(navState.canGoBack);
     setCanGoForward(navState.canGoForward);
+
+    // Prevent immediate overwrite after setting from params
+    if (justSetFromParams.current) {
+      justSetFromParams.current = false;
+      return;
+    }
+
     setCurrentUrl(navState.url);
     setUrl(navState.url);
+
+    AsyncStorage.getItem("history").then((data) => {
+      let arr = [];
+      try {
+        arr = data ? JSON.parse(data) : [];
+      } catch {
+        arr = [];
+      }
+      // Avoid consecutive duplicates
+      if (arr[arr.length - 1] !== navState.url) {
+        arr.push(navState.url);
+        AsyncStorage.setItem("history", JSON.stringify(arr));
+      }
+    });
   };
 
   const onLoadStart = (): void => {
@@ -239,32 +441,32 @@ export default function App(): JSX.Element {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, themed.container]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.topSection}
       >
         {/* Address Bar with Reload and More buttons */}
-        <View style={styles.addressBar}>
-          <TouchableOpacity onPress={refresh}>
-            <Animated.View style={{
+        <View style={[styles.addressBar, themed.container]}>
+          <TouchableOpacity onPress={refresh} style={themed.container}>
+            <Animated.View style={[{
               transform: [{
                 rotate: reloadAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: ['0deg', '360deg']
                 })
               }]
-            }}>
+            }, themed.container]}>
               <Ionicons style={{
                 marginLeft: 15,
                 marginRight: 0,
-  }} name="reload" size={16} color="#fff" />
+  }} name="reload" size={16} color={theme === "dark" ? "#fff" : "#222"} />
           </Animated.View>
         </TouchableOpacity>
           
           <TextInput
             ref={inputRef}
-            style={styles.input}
+            style={[styles.input, themed.text]}
             placeholder="Enter URL or search..."
             placeholderTextColor="#c4c4c4"
             value={url}
@@ -273,12 +475,11 @@ export default function App(): JSX.Element {
             returnKeyType="go"
             autoCapitalize="none"
             autoCorrect={false}
-            selection={selection}
             onFocus={() => setSelection({ start: 0, end: url.length })}
           />
           
           <TouchableOpacity style={[styles.sideButton, { right: 4 }]} onPress={handleMorePress}>
-            <Ionicons name="ellipsis-vertical" size={18} color="#fff" />
+            <Ionicons name="ellipsis-vertical" size={18} color={theme === "dark" ? "#fff" : "#222"} />
           </TouchableOpacity>
           
           {loading && (
@@ -288,9 +489,72 @@ export default function App(): JSX.Element {
           )}
         </View>
       </KeyboardAvoidingView>
+      
+      <Animated.View style={{
+            opacity: findBarAnim,
+        // Optionally, for slide in from top:
+        transform: [{ translateY: findBarAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [-30, 0]
+        }) }]
+      }}>
+        {showFindBar && (
+          <View style={{flexDirection:'row', alignItems:'center', backgroundColor:'#222', padding:6}}>
+            <TextInput
+              style={{flex:1, color:'#fff', backgroundColor:'#444', borderRadius:6, padding:6}}
+              placeholder="Find in page..."
+              placeholderTextColor="#aaa"
+              value={findText}
+              onChangeText={t => {
+                setFindText(t);
+                setFindIndex(0);
+                runFindInPage(t, 0);
+              }}
+              autoFocus
+            />
+            <Text style={{color:'#fff', marginHorizontal:8}}>{findCount > 0 ? `${findIndex+1}/${findCount}` : ''}</Text>
+            
+            <TouchableOpacity onPress={() => {
+              if(findCount > 0){
+                const prev = (findIndex - 1 + findCount) % findCount;
+                setFindIndex(prev);
+                runFindInPage(findText, prev);
+              }
+            }}>
+              <Ionicons name="chevron-up" size={22} color={theme === "dark" ? "#fff" : "#222"} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => {
+              if(findCount > 0){
+                const next = (findIndex + 1) % findCount;
+                setFindIndex(next);
+                runFindInPage(findText, next);
+              }
+            }}>
+              <Ionicons name="chevron-down" size={22} color={theme === "dark" ? "#fff" : "#222"} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => {
+              Animated.timing(findBarAnim, {
+              toValue: 0,
+              duration: 300,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }).start(() => {
+              setShowFindBar(false);
+              setFindText('');
+              setFindIndex(0);
+              setFindCount(0);
+              runFindInPage('', 0);
+            });
+          }}>
+              <Ionicons name="close" size={22} color={theme === "dark" ? "#fff" : "#222"} />
+            </TouchableOpacity>
+          </View>
+        )}
+        </Animated.View>
 
       {/* WebView */}
       <WebView
+        onMessage={onWebViewMessage}
         ref={webViewRef}
         source={{ uri: currentUrl }}
         style={styles.webview}
@@ -302,6 +566,7 @@ export default function App(): JSX.Element {
         scalesPageToFit={true}
         javaScriptEnabled={true}
         domStorageEnabled={true}
+        userAgent={desktopMode ? desktopUserAgent : mobileUserAgent}
         onFileDownload={({ nativeEvent }) => {
           const url = nativeEvent.downloadUrl;
           let filename = url.split('/').pop()?.split('?')[0] || `file_${Date.now()}`;
@@ -336,8 +601,8 @@ export default function App(): JSX.Element {
           activeOpacity={1}
           onPress={closeMoreMenu}
         >
-          <View style={styles.menuContainer}>
-            <ScrollView style={styles.menuScrollView}>
+          <View style={[styles.menuContainer, themed.container]}>
+            <ScrollView style={[styles.menuScrollView]}>
               {menuOptions.map((option) => (
                 <TouchableOpacity
                   key={option.id}
@@ -354,6 +619,7 @@ export default function App(): JSX.Element {
                   }
                 >
                   <Text style={[
+                    themed.text,
                     styles.menuIcon,
                     (option.id === 'back' && !canGoBack) || 
                     (option.id === 'forward' && !canGoForward) 
@@ -362,6 +628,7 @@ export default function App(): JSX.Element {
                     {option.icon}
                   </Text>
                   <Text style={[
+                    themed.text,
                     styles.menuText,
                     (option.id === 'back' && !canGoBack) || 
                     (option.id === 'forward' && !canGoForward) 
@@ -382,11 +649,9 @@ export default function App(): JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#333",
     paddingTop: Platform.OS === 'ios' ? 50 : 25, // Account for status bar
   },
   topSection: {
-    backgroundColor: "#333",
     paddingHorizontal: 10,
     paddingBottom: 5,
   },
@@ -395,7 +660,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
     position: "relative",
-    backgroundColor: "#444",
     borderColor: "#666",
     borderRadius: 8,
     borderWidth: 1,
@@ -405,7 +669,6 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingLeft: 40, // Space for reload button
     paddingRight: 40, // Space for more button
-    color: "#fff",
     fontSize: 16,
   },
   sideButton: {
@@ -418,7 +681,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   sideButtonText: {
-    color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
@@ -431,7 +693,6 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-    backgroundColor: "#000",
   },
   modalOverlay: {
     flex: 1,
@@ -439,7 +700,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   menuContainer: {
-    backgroundColor: "#2c2c2c",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: Dimensions.get('window').height * 0.7,
@@ -454,18 +714,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#444",
   },
   menuIcon: {
     fontSize: 20,
-    color: "#fff",
     width: 30,
     textAlign: "center",
     marginRight: 16,
   },
   menuText: {
     fontSize: 16,
-    color: "#fff",
     flex: 1,
   },
   disabledMenuItem: {
