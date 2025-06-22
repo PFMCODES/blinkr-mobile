@@ -24,6 +24,7 @@ export default function Settings() {
   useEffect(() => {
     AsyncStorage.getItem("theme").then(val => {
       if (val === "light" || val === "dark") setTheme(val);
+      if (!val) { setTheme("light")  }
     });
   }, []);
 
