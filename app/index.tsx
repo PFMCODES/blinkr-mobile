@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Appearance } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import * as FileSystem from "expo-file-system";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { JSX } from "react";
@@ -174,30 +175,43 @@ const lightStyles = StyleSheet.create({
   const saveBookmark = async () => {
       if (incognitoMode) {
         if (isBookmarked) {
-          Alert.alert("this page is already bookmarked, Do you want to remove it from Bookmwrks?", [
+          Alert.alert(
+            "This page is already bookmarked",
+            "Do you want to remove it from Bookmarks?",
+            [
               { 
                 text: "Cancel",
                 style: "cancel"
               },
               {
-                text: "ok",
+                text: "OK",
                 onPress: async () => {
                   const updated = bookmarks.filter((b: any) => b.url !== newBookmark.url);
-                  await AsyncStorage("bookmarks", JSON.stringify(updated));
-                  setBookmarkIcon("bookmark-outlune")
-              },
-            ]
-          )
-        }
+                  await AsyncStorage.setItem("bookmarks", JSON.stringify(updated));
+                  setBookmarkIcon("bookmark-outline");
+              }
+           }
+       ]
+    );
+ }
         else {
-          Alert.alert("Do you want to bookmark this page?", [
+          Alert.alert("Do you want to bookmark this page? You're in icognito mode", [
              {
                 text: "Don't bookmark",
                 style: "cancel"
               },
               {
                 text: "Bookmark Anyways",
-                onPress: 
+                onPress: async () => {
+                  const newBookmark = {
+                     url: currentUrl,
+                     title: currentUrl, // or extract title using injected JS if needed
+                     timestamp: Date.now(),
+                   };
+
+                   const stored = await AsyncStorage.getItem("bookmarks");
+                   const bookmarks = stored ? JSON.parse(stored) : [];
+                }
               },
             ]
           )
@@ -369,7 +383,7 @@ const updated = bookmarks.filter((b: any) => b.url !== newBookmark.url);
     {
        id: 'incognito',
        title: incognitoMode ? 'Exit Incognito' : 'New Incognito Tab',
-       icon: <Ionicons name="eye-off-outline" size={22} color="#fff" />,
+       icon: <MaterialCommunityIcons name="incognito" size={22} color={theme === "dark" ? "#fff" : "#222"} />,
        action: () => {
          setIncognitoMode(!incognitoMode);
          setShowMoreMenu(false);
@@ -453,7 +467,6 @@ const updated = bookmarks.filter((b: any) => b.url !== newBookmark.url);
 
     setCurrentUrl(navState.url);
     setUrl(navState.url);
-
     AsyncStorage.getItem("history").then((data) => {
       let arr = [];
       try {
