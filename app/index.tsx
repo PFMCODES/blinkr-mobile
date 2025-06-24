@@ -34,6 +34,7 @@ interface MenuOption {
 }
 
 export default function App(): JSX.Element {
+  const [incognitoMode, setIncognitoMode] = useState<boolean>(false);
   const params = useLocalSearchParams();
   const justSetFromParams = useRef(false);
   const [showFindBar, setShowFindBar] = useState(false);
@@ -171,6 +172,37 @@ const lightStyles = StyleSheet.create({
 
   const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   const saveBookmark = async () => {
+      if (incognitoMode) {
+        if (isBookmarked) {
+          Alert.alert("this page is already bookmarked, Do you want to remove it from Bookmwrks?", [
+              { 
+                text: "Cancel",
+                style: "cancel"
+              },
+              {
+                text: "ok",
+                onPress: async () => {
+                  const updated = bookmarks.filter((b: any) => b.url !== newBookmark.url);
+                  await AsyncStorage("bookmarks", JSON.stringify(updated));
+                  setBookmarkIcon("bookmark-outlune")
+              },
+            ]
+          )
+        }
+        else {
+          Alert.alert("Do you want to bookmark this page?", [
+             {
+                text: "Don't bookmark",
+                style: "cancel"
+              },
+              {
+                text: "Bookmark Anyways",
+                onPress: 
+              },
+            ]
+          )
+        }
+      }
       try {
         const newBookmark = {
           url: currentUrl,
@@ -196,7 +228,7 @@ const lightStyles = StyleSheet.create({
                 text: "OK",
                 onPress: async () => {
                   // Remove the bookmark
-                  const updated = bookmarks.filter((b: any) => b.url !== newBookmark.url);
+const updated = bookmarks.filter((b: any) => b.url !== newBookmark.url);
                   await AsyncStorage.setItem("bookmarks", JSON.stringify(updated));
                   setBookmarkIcon('bookmark-outline');
                 }
@@ -335,6 +367,17 @@ const lightStyles = StyleSheet.create({
       },
     },
     {
+       id: 'incognito',
+       title: incognitoMode ? 'Exit Incognito' : 'New Incognito Tab',
+       icon: <Ionicons name="eye-off-outline" size={22} color="#fff" />,
+       action: () => {
+         setIncognitoMode(!incognitoMode);
+         setShowMoreMenu(false);
+         // Optionally reset currentUrl to blank or homepage
+         setCurrentUrl("https://google.com");
+       }
+     },
+    {
       id: 'share',
       title: 'Share',
       icon: <Ionicons name="share-outline"  size={24} color={theme === "dark" ? "#fff" : "#222"}/>,
@@ -456,7 +499,7 @@ const lightStyles = StyleSheet.create({
                   outputRange: ['0deg', '360deg']
                 })
               }]
-            }, themed.container]}>
+            }], themed.container}>
               <Ionicons style={{
                 marginLeft: 15,
                 marginRight: 0,
@@ -493,7 +536,7 @@ const lightStyles = StyleSheet.create({
       <Animated.View style={{
             opacity: findBarAnim,
         // Optionally, for slide in from top:
-        transform: [{ translateY: findBarAnim.interpolate({
+          transform: [{ translateY: findBarAnim.interpolate({
           inputRange: [0, 1],
           outputRange: [-30, 0]
         }) }]
