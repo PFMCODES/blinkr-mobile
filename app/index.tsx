@@ -44,7 +44,7 @@ export default function App(): JSX.Element {
   const [findCount, setFindCount] = useState(0);
   const [desktopMode, setDesktopMode] = useState(false);
   const desktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-  const mobileUserAgent = undefined; // Use default mobile UA
+  const mobileUserAgent = "Mozilla/5.0 (Linux; Android 13; BlinkrPhone) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36 Blinkr/1.0"; // Use default mobile UA
   const [url, setUrl] = useState<string>("https://google.com");
   const [currentUrl, setCurrentUrl] = useState<string>("https://google.com");
   const [canGoBack, setCanGoBack] = useState<boolean>(false);

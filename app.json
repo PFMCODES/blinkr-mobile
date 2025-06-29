@@ -12,6 +12,21 @@
       "supportsTablet": true
     },
     "android": {
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            { "scheme": "http" },
+            { "scheme": "https" }
+          ],
+          "category": [
+            "BROWSER",
+            "DEFAULT"
+          ],
+          "autoverify": true,
+        }
+      ],
+      "permissions": "INTERNET",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#333333"
